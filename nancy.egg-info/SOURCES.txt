@@ -1,0 +1,15 @@
+setup.py
+nancy/__init__.py
+nancy/cli.py
+nancy/config.py
+nancy/generator.py
+nancy/llm_client.py
+nancy/memory.py
+nancy/ts_client.py
+nancy/utils.py
+nancy.egg-info/PKG-INFO
+nancy.egg-info/SOURCES.txt
+nancy.egg-info/dependency_links.txt
+nancy.egg-info/entry_points.txt
+nancy.egg-info/requires.txt
+nancy.egg-info/top_level.txt

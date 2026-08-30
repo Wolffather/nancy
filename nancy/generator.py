@@ -7,7 +7,7 @@ class TestGenerator:
         self.skills_dir = Path(skills_dir)
         self.prompt_builder = PromptBuilder(template_dir)
 
-    def generate_test(self, context, skill_type="api", language="java", framework=None, feedback=None):
+    def generate_test(self, context, skill_type, language, framework=None, feedback=None):
         # Загружаем системный промпт (скилл)
         system_prompt = self._load_skill(skill_type)
 

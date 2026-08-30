@@ -14,6 +14,15 @@ def show_spinner(message: str):
     with console.status(f"[bold green]{message}", spinner="dots"):
         yield
 
+def show_settings(settings_dict: dict):
+    """Показывает настройки в виде таблицы."""
+    from rich.table import Table
+    table = Table(title="Текущие настройки Nancy", style="bold cyan")
+    table.add_column("Параметр", style="green")
+    table.add_column("Значение", style="white")
+    for key, value in settings_dict.items():
+        table.add_row(key, str(value) if value is not None else "—")
+    console.print(table)
 
 def show_success(message: str) -> None:
     console.print(f"[bold green]✅ {message}[/]")

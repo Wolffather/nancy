@@ -6,8 +6,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         "click",
-        "requests",
+        "rich",
         "python-dotenv",
+        "requests",
         "openai",
     ],
     entry_points={
@@ -15,4 +16,11 @@ setup(
             "nancy = nancy.cli:cli",
         ],
     },
+    python_requires=">=3.11",
+    description="CLI-агент для генерации автотестов с помощью LLM",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/Wolffather/nancy",
+    author="Мирсков Савелий",
+    author_email="smirskov93@gmail.com",
 )

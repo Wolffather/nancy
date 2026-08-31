@@ -52,3 +52,12 @@ register_tool(
         "language": {"type": "string", "description": "Язык"}
     }
 )
+register_tool(
+    name="analyze_project",
+    description="Анализирует проект по указанному пути, находит классы и методы, возвращает структуру для генерации тестов.",
+    parameters={
+        "project_path": {"type": "string", "description": "Путь к корню проекта"},
+        "language": {"type": "string", "description": "Язык проекта (java, python...)"},
+        "test_framework": {"type": "string", "description": "Фреймворк для генерации тестов"}
+    }
+)

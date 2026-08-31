@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from .prompt_builder import PromptBuilder
 
@@ -21,6 +22,14 @@ class TestGenerator:
 
         # Вызываем LLM
         return self.llm.generate(user_prompt, system_prompt)
+
+    def generate_tests_for_project(self, project_structure: dict, language: str, framework: str) -> str:
+        """Генерирует тесты для всего проекта на основе структуры."""
+        # Формируем промпт с описанием всех классов и методов
+        prompt = f"Сгенерируй тесты на языке {language} с фреймворком {framework} для следующей структуры проекта:\n"
+        prompt += json.dumps(project_structure, indent=2)
+        # Вызываем LLM
+        return self.llm.generate(prompt, system_prompt=self._load_skill("unit"))
 
     def _load_skill(self, skill_type):
         skill_file = self.skills_dir / f"{skill_type}.md"

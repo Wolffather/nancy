@@ -1,8 +1,59 @@
 from pathlib import Path
+from typing import Optional
 
+class PromptBuilder:
+    def __init__(self, template_dir=None):
+        if template_dir is None:
+            # Определяем путь относительно этого файла
+            base_dir = Path(__file__).parent
+            self.template_dir = base_dir / "prompts"
+        else:
+            self.template_dir = Path(template_dir)
+        self.cache = {}
 
-def _default_user_template():
-    return """
+    def _load_template(self, template_name: str) -> str:
+        if template_name in self.cache:
+            return self.cache[template_name]
+
+        file_path = self.template_dir / template_name
+        if file_path.exists():
+            content = file_path.read_text(encoding='utf-8')
+            self.cache[template_name] = content
+            return content
+
+        fallback = self._default_template(template_name)
+        self.cache[template_name] = fallback
+        return fallback
+
+    def _default_template(self, template_name: str) -> str:
+        """Возвращает встроенный шаблон, если файл не найден."""
+        if "project" in template_name and "strategy" in template_name:
+            return """
+Ты — эксперт по тестированию. Проанализируй структуру проекта на языке {language} и предложи стратегию тестирования: какие классы и методы нуждаются в тестировании, какие типы тестов (юнит, интеграционные, e2e) и какие фреймворки лучше использовать. Не генерируй код автотестов - только описание стратегии на русском языке.
+
+Структура проекта:
+{context}
+{feedback}
+"""
+        elif "project" in template_name:
+            return """
+Проанализируй проект на языке {language} и сгенерируй тесты для всех публичных методов {fwk}.
+
+Структура проекта:
+{context}
+{feedback}
+"""
+        elif "ticket" in template_name:
+            return """
+Тикет:
+{context}
+
+Сгенерируй автотест на языке {language}
+{fwk}
+{feedback}
+"""
+        else:
+            return """
 Сгенерируй автотест на языке {language}
 {fwk}
 Описание сценария:
@@ -10,24 +61,18 @@ def _default_user_template():
 {feedback}
 """
 
-
-class PromptBuilder:
-    def __init__(self, template_dir="resources"):
-        self.template_dir = Path(template_dir)
-        self.user_template = self._load_template("user_prompt_template.md")
-
-    def _load_template(self, filename):
-        file_path = self.template_dir / filename
-        if file_path.exists():
-            return file_path.read_text(encoding="utf-8")
-        else:
-            # Встроенный fallback
-            return _default_user_template()
-
-    def build_user_prompt(self, context, language, framework=None, feedback=None):
+    def build_prompt(
+        self,
+        context: str,
+        language: str = "java",
+        framework: Optional[str] = None,
+        feedback: Optional[str] = None,
+        template_name: str = "user_prompt_template.md"
+    ) -> str:
+        template = self._load_template(template_name)
         fwk = f"с использованием фреймворка {framework}" if framework else ""
         fb = f"\nУчти следующие замечания и исправь тест: {feedback}" if feedback else ""
-        return self.user_template.format(
+        return template.format(
             language=language,
             fwk=fwk,
             context=context,

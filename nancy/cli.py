@@ -1,14 +1,17 @@
+import os
 from pathlib import Path
 import click
 
-from nancy.config import load_config, set_config_value, ALLOWED_SETTINGS_KEYS
+from nancy.config import load_config, set_config_value, ALLOWED_SETTINGS_KEYS, get_default_framework_for_language, \
+    SYNONYM_TO_KEY, CONFIG_PARAMETERS
 from nancy.llm_client import LLMClient
-from nancy.ts_client import TSClient   # теперь он сам умеет мокать
-from nancy.generator import TestGenerator
+from nancy.orchestrator import Orchestrator
+from nancy.request_builder import RequestBuilder
 from nancy.ui import (
-    show_error, show_success, show_code,
-    run_interactive_loop, show_available_skills, show_spinner,
-    show_settings
+    console,
+    show_error, show_success,
+    show_available_skills,
+    show_settings, show_info, show_config_set_help, run_interactive_loop, show_code, show_spinner
 )
 from nancy.utils import save_to_file
 
@@ -25,131 +28,114 @@ def config():
     pass
 
 
+def show_current_config():
+    pass
+
+
 @config.command(name="show")
 def config_show():
     """Показать текущие настройки (безопасные параметры)"""
-    cfg = load_config()
-    display = {
-        "Язык по умолчанию": cfg.get('DEFAULT_LANGUAGE'),
-        "Скилл по умолчанию": cfg.get('DEFAULT_SKILL'),
-        "Фреймворк по умолчанию": cfg.get('DEFAULT_FRAMEWORK'),
-        "Папка скиллов": cfg.get('SKILLS_DIR'),
-        "Папка шаблонов": cfg.get('TEMPLATE_DIR'),
-    }
-    show_settings(display)
+    show_current_config()
 
 
-@config.command(name="set")
-@click.argument('key')
-@click.argument('value')
-def config_set(key, value):
-    """Установить значение параметра (только безопасные: language, skill, framework, skills_dir, template_dir)"""
-    mapping = {
-        'language': 'NANCY_DEFAULT_LANGUAGE',
-        'lang': 'NANCY_DEFAULT_LANGUAGE',
-        'skill': 'NANCY_DEFAULT_SKILL',
-        'framework': 'NANCY_DEFAULT_FRAMEWORK',
-        'fw': 'NANCY_DEFAULT_FRAMEWORK',
-        'skills_dir': 'SKILLS_DIR',
-        'template_dir': 'TEMPLATE_DIR',
-    }
-    env_key = mapping.get(key.lower())
-    if env_key is None:
-        env_key = key.upper()
-        if env_key not in ALLOWED_SETTINGS_KEYS:
-            show_error(f"Неизвестный параметр: {key}. Допустимые: language, skill, framework, skills_dir, template_dir")
-            return
-
-    if env_key not in ALLOWED_SETTINGS_KEYS:
-        show_error(f"Изменение параметра '{key}' запрещено (можно менять только: language, skill, framework, skills_dir, template_dir)")
+@config.command(name="set", epilog="Для просмотра подробной справки выполните команду без аргументов.")
+@click.argument('key', required=False)
+@click.argument('value', required=False)
+def config_set(key, value, env_key=None):
+    """Установить значение параметра конфигурации."""
+    # Если ключ или значение не переданы — показываем справку
+    if key is None or value is None:
+        show_config_set_help()
         return
 
+    # Проверяем допустимость
+    if env_key not in ALLOWED_SETTINGS_KEYS:
+        show_error(f"Изменение параметра '{key}' запрещено.")
+        return
+
+    # Сохраняем старые значения (если есть)
+    old_lang = os.getenv('NANCY_DEFAULT_LANGUAGE')
+    old_framework = os.getenv('NANCY_DEFAULT_FRAMEWORK')
+
+    # Устанавливаем новое значение
     set_config_value(env_key, value)
     show_success(f"Параметр '{key}' установлен в '{value}'")
 
+    # Если меняем язык, автоматически подбираем фреймворк
+    if env_key == 'NANCY_DEFAULT_LANGUAGE':
+        new_lang = value
+        default_fw = get_default_framework_for_language(new_lang)
+        if old_lang:
+            old_default_fw = get_default_framework_for_language(old_lang)
+            # Если текущий фреймворк равен старому дефолтному или не задан, то обновляем
+            current_fw = os.getenv('NANCY_DEFAULT_FRAMEWORK')
+            if current_fw == old_default_fw or current_fw is None:
+                set_config_value('NANCY_DEFAULT_FRAMEWORK', default_fw)
+                show_info(f"Фреймворк автоматически изменён на '{default_fw}' для языка {new_lang}")
+        else:
+            # Если старого языка не было, просто устанавливаем дефолтный фреймворк
+            set_config_value('NANCY_DEFAULT_FRAMEWORK', default_fw)
+            show_info(f"Фреймворк автоматически установлен на '{default_fw}' для языка {new_lang}")
 
-@cli.command(help="Сгенерировать тест по тикету (Jira) или текстовому описанию")
-@click.argument('ticket_id', required=False, metavar='[TICKET_ID]')
-@click.option('--description', '-d', help='Текстовое описание сценария (если нет тикета)')
-@click.option('--skill', '-s', help='Тип скилла: api, load, ui, default, security, bdd')
-@click.option('--language', '-lp', type=click.Choice(['java', 'python', 'javascript', 'csharp', 'go', 'ruby'], case_sensitive=False), help='Язык программирования')
-@click.option('--framework', '-fw', help='Фреймворк для тестирования')
-@click.option('--output', '-o', help='Путь для сохранения сгенерированного файла')
+
+@cli.command()
+@click.argument('ticket_id', required=False)
+@click.option('--description', '-d', help='Текстовое описание сценария')
+@click.option('--skill', '-s', default='api', help='Тип скилла')
+@click.option('--language', '-lp', help='Язык программирования (переопределяет дефолт)')
+@click.option('--framework', '-fw', help='Фреймворк (переопределяет дефолт)')
+@click.option('--mock', is_flag=True, help='Использовать мок-клиент для трекер-системы')
 @click.option('--interactive', '-i', is_flag=True, help='Интерактивный режим')
-@click.option('--mock', is_flag=True, help='Использовать мок-клиент для трекер-системы (без реального API)')
-def generate(ticket_id, description, skill, language, framework, output, interactive, mock):
+@click.option('--output', '-o', help='Путь для сохранения результата')
+def generate(ticket_id, description, skill, language, framework, mock, interactive, output):
     config = load_config()
-
-    # Подстановка дефолтов из конфига
-    if language is None:
-        language = config.get('DEFAULT_LANGUAGE')
-    if skill is None:
-        skill = config.get('DEFAULT_SKILL')
-    if framework is None:
-        framework = config.get('DEFAULT_FRAMEWORK')
-
-    # Определяем контекст
-    if ticket_id:
-        # Передаём флаг mock в TSClient
-        ts = TSClient(config, mock=mock)
-        try:
-            issue = ts.get_issue(ticket_id)
-            context = f"Заголовок: {issue['fields']['summary']}\nОписание: {issue['fields']['description']}"
-        except Exception as e:
-            show_error(f"Ошибка чтения тикета: {e}")
-            return
-    elif description:
-        context = description
-    else:
-        show_error("Укажи либо ticket_id, либо --description")
-        return
-
-    # Инициализация
     llm = LLMClient(config)
-    generator = TestGenerator(
-        llm,
-        skills_dir=config.get('SKILLS_DIR', 'skills'),
-        template_dir=config.get('TEMPLATE_DIR', 'resources')
+    orchestrator = Orchestrator(config, llm, mock=mock)
+
+    # Формируем запрос через билдер
+    user_request = RequestBuilder.build(
+        ticket_id=ticket_id,
+        description=description,
+        language=language,
+        framework=framework,
+        skill=skill
     )
 
-    # Генерация со спиннером
+    # Генерация
     with show_spinner("Генерация теста..."):
-        test_code = generator.generate_test(
-            context=context,
-            skill_type=skill,
-            language=language,
-            framework=framework
-        )
+        result = orchestrator.run(user_request, skill=skill)
 
-    # Если не интерактив — сохраняем или выводим
+    # Если не интерактив и не output — просто выводим
     if not interactive:
         if output:
-            save_to_file(test_code, output)
+            save_to_file(result, output)
             show_success(f"Тест сохранён в {output}")
         else:
-            show_code(test_code, language)
+            console.print(result)
         return
 
     # Интерактивный режим
-    final_code = run_interactive_loop(
-        initial_code=test_code,
-        generator=generator,
-        context=context,
-        skill=skill,
-        language=language,
-        framework=framework,
-        output=output
-    )
-
-    if final_code is None:
-        return
-
-    # Сохраняем финальную версию
-    if output:
-        save_to_file(final_code, output)
-        show_success(f"Тест сохранён в {output}")
-    else:
-        show_code(final_code, language)
+    # Для интерактива нам нужен генератор, который умеет перегенерировать
+    # Пока используем существующую логику (может быть доработана)
+    final_code = result
+    if interactive:
+        # Используем run_interactive_loop из ui
+        final_code = run_interactive_loop(
+            initial_code=result,
+            generator=orchestrator.generator,  # передаём генератор
+            context=description or ticket_id,
+            skill=skill,
+            language=language or config.get('DEFAULT_LANGUAGE'),
+            framework=framework or config.get('DEFAULT_FRAMEWORK'),
+            output=output
+        )
+        if final_code is None:
+            return
+        if output:
+            save_to_file(final_code, output)
+            show_success(f"Финальный тест сохранён в {output}")
+        else:
+            show_code(final_code, language or config.get('DEFAULT_LANGUAGE'))
 
 
 @cli.command(help="Показать доступные скиллы")

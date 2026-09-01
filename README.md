@@ -61,9 +61,15 @@ pip install -e .
 cp .env_example .env
 ```
 
-### Отредактируйте .env, добавьте DEEPSEEK_API_KEY=sk-...
+### 5. Отредактируйте .env, добавьте необходимые для работы ключи
+```bash
+LLM_API_KEY=
+LLM_TEMPERATURE=
+NANCY_DEFAULT_LANGUAGE=
+```
 
-### 5. Проверьте установку
+
+### 6. Проверьте установку
 ```bash
 nancy --help
 ```

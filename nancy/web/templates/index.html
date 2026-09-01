@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nancy — AI-агент для тестирования</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; padding: 2rem; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1a202c; margin-bottom: 1.5rem; }
+        label { display: block; font-weight: 600; margin-top: 1rem; }
+        input, select, textarea { width: 100%; padding: 0.5rem; margin-top: 0.25rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1rem; }
+        textarea { min-height: 80px; }
+        .checkbox-group { display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .checkbox-group label { display: flex; align-items: center; gap: 0.3rem; font-weight: normal; margin-top: 0; }
+        button { background: #2b6cb0; color: white; border: none; padding: 0.75rem 2rem; border-radius: 6px; font-size: 1rem; cursor: pointer; margin-top: 1.5rem; transition: background 0.2s; }
+        button:hover { background: #2c5282; }
+        .result { margin-top: 2rem; background: #edf2f7; padding: 1rem; border-radius: 6px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9rem; overflow-x: auto; }
+        .error { color: #e53e3e; background: #fff5f5; padding: 1rem; border-radius: 6px; }
+        .row { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .row > div { flex: 1; min-width: 200px; }
+        @media (max-width: 600px) { body { padding: 1rem; } .container { padding: 1rem; } .row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Nancy — AI-агент для тестирования</h1>
+        <form method="post" action="/generate">
+            <div class="row">
+                <div>
+                    <label for="description">Описание сценария</label>
+                    <textarea id="description" name="description" placeholder="GET /health должен возвращать 200 OK">{{ description or '' }}</textarea>
+                </div>
+                <div>
+                    <label for="ticket_id">Тикет (опционально)</label>
+                    <input id="ticket_id" name="ticket_id" placeholder="PROJ-123" value="{{ ticket_id or '' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="project_path">Путь к проекту</label>
+                    <input id="project_path" name="project_path" placeholder="/path/to/project" value="{{ project_path or '' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="language">Язык</label>
+                    <select id="language" name="language">
+                        <option value="java" {% if language == 'java' %}selected{% endif %}>Java</option>
+                        <option value="python" {% if language == 'python' %}selected{% endif %}>Python</option>
+                        <option value="javascript" {% if language == 'javascript' %}selected{% endif %}>JavaScript</option>
+                        <option value="csharp" {% if language == 'csharp' %}selected{% endif %}>C#</option>
+                        <option value="go" {% if language == 'go' %}selected{% endif %}>Go</option>
+                        <option value="ruby" {% if language == 'ruby' %}selected{% endif %}>Ruby</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="framework">Фреймворк</label>
+                    <input id="framework" name="framework" placeholder="junit5+restassured" value="{{ framework or '' }}">
+                </div>
+                <div>
+                    <label for="skill">Скилл</label>
+                    <select id="skill" name="skill">
+                        <option value="api" {% if skill == 'api' %}selected{% endif %}>API</option>
+                        <option value="load" {% if skill == 'load' %}selected{% endif %}>Нагрузка</option>
+                        <option value="ui" {% if skill == 'ui' %}selected{% endif %}>UI</option>
+                        <option value="security" {% if skill == 'security' %}selected{% endif %}>Безопасность</option>
+                        <option value="bdd" {% if skill == 'bdd' %}selected{% endif %}>BDD</option>
+                        <option value="default" {% if skill == 'default' %}selected{% endif %}>Default</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="strategy" {% if strategy %}checked{% endif %}> 📋 Стратегия (вместо кода)</label>
+                <label><input type="checkbox" name="mock" {% if mock %}checked{% endif %}> 🎭 Мок-тикет</label>
+            </div>
+
+            <button type="submit">🚀 Сгенерировать</button>
+        </form>
+
+        {% if result %}
+        <div class="result">
+            <strong>Результат:</strong>
+            <div>{{ result | md | safe }}</div>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error">
+            <strong>❌ Ошибка:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

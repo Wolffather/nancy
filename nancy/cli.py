@@ -133,6 +133,16 @@ def generate(ticket_id, description, skill, language, framework, mock, interacti
     else:
         show_code(final_code, language or config.get('DEFAULT_LANGUAGE'))
 
+@cli.command(help="Запустить веб-интерфейс Nancy")
+@click.option('--host', default='0.0.0.0', help='Хост для сервера')
+@click.option('--port', default=8000, type=int, help='Порт для сервера')
+@click.option('--reload', is_flag=True, help='Включить авто-перезагрузку при изменениях (для разработки)')
+def web(host, port, reload):
+    """Запускает веб-интерфейс Nancy."""
+    from nancy.web.app import run_server
+    click.echo(f"🌐 Запуск веб-интерфейса на http://{host}:{port}")
+    run_server(host=host, port=port, reload=reload)
+
 
 @cli.command(help="Показать доступные скиллы")
 def list_skills():

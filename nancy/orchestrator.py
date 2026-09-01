@@ -61,33 +61,82 @@ class Orchestrator:
             context=context_str,
             language=language or self.config.get('DEFAULT_LANGUAGE', 'java'),
             framework=framework or self.config.get('DEFAULT_FRAMEWORK'),
-            template_name=template_name
+            template_name=template_name,
+            skill=skill,  # добавить
         )
 
         # Отправляем в LLM (без тулов, т.к. всё уже собрано)
         return self.llm.generate(user_prompt, system_prompt)
 
-    def _format_project_structure(self, structure: dict) -> str:
-        """Форматирует структуру проекта в читаемый текст для промпта."""
+    def _format_project_structure(self, structure: dict, max_classes: int = 50, max_methods_per_class: int = 10) -> str:
+        """
+        Форматирует структуру проекта, ограничивая количество классов и методов.
+        """
         lines = []
-        for cls in structure.get("classes", []):
+        classes = structure.get("classes", [])
+        total_classes = len(classes)
+
+        if total_classes > max_classes:
+            lines.append(f"⚠️ Проект содержит {total_classes} классов. Показаны первые {max_classes}.")
+            classes = classes[:max_classes]
+
+        for cls in classes:
             package = cls.get('package', 'default')
             lines.append(f"Класс {cls['name']} (пакет {package})")
-            for method in cls.get("methods", []):
-                params = ", ".join([p.get('name', '') for p in method.get('params', [])])
+            methods = cls.get("methods", [])
+            if len(methods) > max_methods_per_class:
+                lines.append(f"  (всего {len(methods)} методов, показаны первые {max_methods_per_class})")
+                methods = methods[:max_methods_per_class]
+
+            for method in methods:
+                params = method.get('params', [])
+                param_names = []
+                for p in params:
+                    if isinstance(p, dict):
+                        param_names.append(p.get('name', ''))
+                    else:
+                        param_names.append(str(p))
+                params_str = ", ".join(param_names)
                 return_type = method.get('return_type', 'void')
-                lines.append(f"  - метод {method['name']}({params}) -> {return_type}")
+                lines.append(f"  - метод {method['name']}({params_str}) -> {return_type}")
+
         if not lines:
             return "Не найдено классов или методов для анализа."
+
         return "\n".join(lines)
 
     def _load_skill(self, skill_name: str) -> str:
-        """Загружает системный промпт (скилл) из папки skills/."""
+        """
+        Загружает скилл, автоматически включая best_practices.md (если он существует).
+        Если skill_name == "best_practices", загружается только он (без дублирования).
+        """
         skills_dir = Path(self.config.get('SKILLS_DIR', 'skills'))
+        best_practices_file = skills_dir / "best_practices.md"
         skill_file = skills_dir / f"{skill_name}.md"
+
+        # Если запрошен специально best_practices, загружаем только его
+        if skill_name == "best_practices":
+            if best_practices_file.exists():
+                return best_practices_file.read_text(encoding='utf-8')
+            return ""
+
+        parts = []
+
+        # 1. Добавляем best_practices, если есть
+        if best_practices_file.exists():
+            parts.append(best_practices_file.read_text(encoding='utf-8'))
+
+        # 2. Добавляем основной скилл (или default, если его нет)
         if skill_file.exists():
-            return skill_file.read_text(encoding='utf-8')
-        default_file = skills_dir / "default.md"
-        if default_file.exists():
-            return default_file.read_text(encoding='utf-8')
-        return "Ты — эксперт по автоматизации тестирования. Генерируй качественный код."
+            parts.append(skill_file.read_text(encoding='utf-8'))
+        else:
+            default_file = skills_dir / "default.md"
+            if default_file.exists():
+                parts.append(default_file.read_text(encoding='utf-8'))
+
+        # Если ничего не загружено — возвращаем базовый промпт
+        if not parts:
+            return "Ты — эксперт по автоматизации тестирования. Генерируй качественный код."
+
+        # Объединяем части с разделителем
+        return "\n\n---\n\n".join(parts)

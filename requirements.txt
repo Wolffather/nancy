@@ -3,3 +3,9 @@ rich
 python-dotenv
 requests
 openai
+fastapi
+uvicorn
+jinja2
+python-multipart
+markdown
+pygments

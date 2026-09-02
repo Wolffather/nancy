@@ -45,3 +45,39 @@ def save_to_file(content: str, output_path: str) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding='utf-8')
+
+def get_frameworks_to_languages_mapping() -> dict:
+    """Возвращает словарь с маппингом фреймворков к языкам."""
+    return {
+            # Java
+            'junit': 'java',
+            'testng': 'java',
+            'restassured': 'java',
+            'selenide': 'java',
+            'mockito': 'java',
+            'assertj': 'java',
+            # Python
+            'pytest': 'python',
+            'unittest': 'python',
+            'requests': 'python',
+            'selenium': None,  # мультиязычный
+            'playwright': None,  # мультиязычный
+            'cypress': 'javascript',
+            'jest': 'javascript',
+            'supertest': 'javascript',
+            'mocha': 'javascript',
+            # C#
+            'nunit': 'csharp',
+            'xunit': 'csharp',
+            'restsharp': 'csharp',
+            # Go
+            'testing': 'go',
+            'httptest': 'go',
+            # Ruby
+            'rspec': 'ruby',
+            'rack-test': 'ruby',
+            # другие
+            'gatling': 'java',
+            'jmeter': 'java',  # хотя JMeter не привязан к языку, но обычно Java
+            'k6': 'javascript',
+        }

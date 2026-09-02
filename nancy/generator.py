@@ -1,28 +1,24 @@
 import json
 from pathlib import Path
-from .prompt_builder import PromptBuilder
 
 
 
 class TestGenerator:
-    def __init__(self, llm_client, skills_dir=None, prompt_builder: PromptBuilder = None):
+    def __init__(self, llm_client, skills_dir: str, prompt_builder):
         self.llm = llm_client
-        self.skills_dir = Path(skills_dir) if skills_dir else Path('skills')
+        self.skills_dir = Path(skills_dir)
         self.prompt_builder = prompt_builder
 
-    def generate_test(self, context, skill_type, language, framework=None, feedback=None):
-        # Загружаем системный промпт (скилл)
+    def generate_test(self, context, skill_type="api", language="java", framework=None, feedback=None):
         system_prompt = self._load_skill(skill_type)
-
-        # Строим пользовательский промпт
-        user_prompt = self.prompt_builder.build_user_prompt(
+        user_prompt = self.prompt_builder.build_prompt(
             context=context,
             language=language,
             framework=framework,
-            feedback=feedback
+            feedback=feedback,
+            skill=skill_type,
+            template_name="user_prompt_template.md"
         )
-
-        # Вызываем LLM
         return self.llm.generate(user_prompt, system_prompt)
 
     def generate_tests_for_project(self, project_structure: dict, language: str, framework: str) -> str:

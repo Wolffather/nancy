@@ -49,11 +49,20 @@ def show_code(code: str, language: str = "java") -> None:
     syntax = Syntax(code, language, theme="monokai", line_numbers=True)
     console.print(Panel(syntax, title="Сгенерированный код", border_style="cyan"))
 
+def show_debug_message(message: str) -> None:
+    """Показывает сообщения для дебага."""
+    console.print(f"[bold white] {"[DEBUG] " + message}[/]")
+
 
 def prompt_action() -> str:
     """Спрашивает пользователя, что делать с кодом."""
     console.print("\n[bold yellow]Что делаем?[/] (y — сохранить/выйти, n — перегенерировать, e — редактировать, c — отмена без сохранения)")
     return click.prompt("", type=click.Choice(['y', 'n', 'e', 'c'], case_sensitive=False), default='y')
+
+def prompt_save_to_file() -> str:
+    """Спрашивает пользователя, сохранить ли сгенерированный тест в файл."""
+    click.prompt("Сохранить в файл?")
+    return click.prompt("", type=click.Choice(['y', 'n'], case_sensitive=False), default='y')
 
 
 def prompt_feedback() -> str:
@@ -90,6 +99,18 @@ def show_available_skills(skills_dir: Path) -> None:
         table.add_row(f.stem, description[:60] + ("..." if len(description) > 60 else ""))
 
     console.print(table)
+
+def prompt_language() -> str:
+    """Спрашивает пользователя, на каком языке писать тесты."""
+    console.print("[bold yellow]Выбранный фреймворк поддерживает несколько языков.[/]")
+    console.print("Выберите язык программирования:")
+    languages = ["java", "python", "javascript", "csharp", "go", "ruby"]
+    for i, lang in enumerate(languages, 1):
+        console.print(f"  {i}. {lang}")
+    choice = click.prompt("Введите номер", type=int, default=1)
+    if 1 <= choice <= len(languages):
+        return languages[choice - 1]
+    return "java"  # fallback
 
 
 def show_config_set_help():
@@ -149,8 +170,7 @@ def run_interactive_loop(
         context: str,
         skill: str,
         language: str,
-        framework: str,
-        output: str = None
+        framework: str
 ) -> str:
     """
     Запускает интерактивный цикл: показывает код, принимает команды,

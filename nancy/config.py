@@ -56,20 +56,6 @@ for key, info in CONFIG_PARAMETERS.items():
     for syn in info['synonyms']:
         SYNONYM_TO_KEY[syn] = key
 
-# Рекомендуемые фреймворки для каждого языка
-DEFAULT_FRAMEWORKS_BY_LANGUAGE = {
-    'java': 'junit5+restassured',
-    'python': 'pytest+requests',
-    'javascript': 'jest+supertest',
-    'csharp': 'nunit+restsharp',
-    'go': 'testing+httptest',
-    'ruby': 'rspec+rack-test',
-}
-
-def get_default_framework_for_language(lang):
-    """Возвращает рекомендуемый фреймворк для языка."""
-    return DEFAULT_FRAMEWORKS_BY_LANGUAGE.get(lang.lower(), 'junit5+restassured')
-
 def load_config():
     load_dotenv()
     # Строим конфиг на основе CONFIG_PARAMETERS
@@ -85,19 +71,24 @@ def load_config():
             else:
                 config[key] = env_value
 
-    # Добавляем специальные ключи (не описанные в CONFIG_PARAMETERS)
+    # Специальные ключи (не описанные в CONFIG_PARAMETERS)
     config['LLM_API_KEY'] = os.getenv('LLM_API_KEY')
     config['TS_URL'] = os.getenv('TS_URL')
     config['TS_EMAIL'] = os.getenv('TS_EMAIL')
     config['TS_API_TOKEN'] = os.getenv('TS_API_TOKEN')
     config['MOCK_TS'] = os.getenv('MOCK_TS', 'false').lower() == 'true'
+    config['TS_API_PATH'] = os.getenv('TS_API_PATH')
+    config['SKILLS_DIR'] = os.getenv('SKILLS_DIR')
+    config['PROMPTS_DIR'] = os.getenv('PROMPTS_DIR')
+    config['TEMPLATES_DIR'] = os.getenv('TEMPLATES_DIR')
 
-    # Алиасы для удобства (без префикса NANCY_)
+    # Алиасы для удобства
     config['DEFAULT_LANGUAGE'] = config.get('NANCY_DEFAULT_LANGUAGE')
     config['DEFAULT_SKILL'] = config.get('NANCY_DEFAULT_SKILL')
     config['DEFAULT_FRAMEWORK'] = config.get('NANCY_DEFAULT_FRAMEWORK')
     config['SKILLS_DIR'] = config.get('SKILLS_DIR')
-    config['TEMPLATE_DIR'] = config.get('TEMPLATE_DIR')
+    config['PROMPTS_DIR'] = config.get('PROMPTS_DIR')
+    config['TEMPLATES_DIR'] = config.get('TEMPLATES_DIR')
 
     return config
 

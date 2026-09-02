@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import click
 
-from nancy.config import load_config, set_config_value, ALLOWED_SETTINGS_KEYS, get_default_framework_for_language, \
+from nancy.config import load_config, set_config_value, ALLOWED_SETTINGS_KEYS, \
     SYNONYM_TO_KEY, CONFIG_PARAMETERS
 from nancy.llm_client import LLMClient
 from nancy.orchestrator import Orchestrator
@@ -10,7 +10,7 @@ from nancy.ui import (
     console,
     show_error, show_success,
     show_available_skills,
-    show_settings, show_info, show_config_set_help,
+    show_info, show_config_set_help,
     show_code, run_interactive_loop, show_spinner, show_current_config
 )
 from nancy.utils import save_to_file
@@ -43,6 +43,7 @@ def config_set(key, value):
         show_config_set_help()
         return
 
+    # Определяем полное имя переменной
     env_key = SYNONYM_TO_KEY.get(key.lower())
     if env_key is None:
         env_key = key.upper()
@@ -54,38 +55,32 @@ def config_set(key, value):
         show_error(f"Изменение параметра '{key}' запрещено.")
         return
 
-    old_lang = os.getenv('NANCY_DEFAULT_LANGUAGE')
-    old_framework = os.getenv('NANCY_DEFAULT_FRAMEWORK')
-
+    # Устанавливаем значение (без дополнительной логики)
     set_config_value(env_key, value)
     show_success(f"Параметр '{key}' установлен в '{value}'")
-
-    if env_key == 'NANCY_DEFAULT_LANGUAGE':
-        new_lang = value
-        default_fw = get_default_framework_for_language(new_lang)
-        if old_lang:
-            old_default_fw = get_default_framework_for_language(old_lang)
-            current_fw = os.getenv('NANCY_DEFAULT_FRAMEWORK')
-            if current_fw == old_default_fw or current_fw is None:
-                set_config_value('NANCY_DEFAULT_FRAMEWORK', default_fw)
-                show_info(f"Фреймворк автоматически изменён на '{default_fw}' для языка {new_lang}")
-        else:
-            set_config_value('NANCY_DEFAULT_FRAMEWORK', default_fw)
-            show_info(f"Фреймворк автоматически установлен на '{default_fw}' для языка {new_lang}")
 
 
 @cli.command()
 @click.argument('ticket_id', required=False)
 @click.option('--description', '-d', help='Текстовое описание сценария')
-@click.option('--skill', '-s', default='api', help='Тип скилла')
-@click.option('--language', '-lp', help='Язык программирования (переопределяет дефолт)')
-@click.option('--framework', '-fw', help='Фреймворк (переопределяет дефолт)')
+@click.option('--skill', '-s', default=None, help='Тип скилла')
+@click.option('--language', '-lp', default=None, help='Язык программирования')
+@click.option('--framework', '-fw', default=None, help='Фреймворк')
 @click.option('--mock', is_flag=True, help='Использовать мок-клиент для трекер-системы')
 @click.option('--interactive', '-i', is_flag=True, help='Интерактивный режим')
 @click.option('--output', '-o', help='Путь для сохранения результата')
 @click.option('--project-path', '-p', help='Путь к проекту для автоматического анализа')
 @click.option('--strategy', '-S', is_flag=True, help='Выдать предложение по стратегии тестирования вместо генерации кода')
 def generate(ticket_id, description, skill, language, framework, mock, interactive, output, project_path, strategy):
+    config = load_config()
+    # Подстановка дефолтов
+    if skill is None:
+        skill = config.get('DEFAULT_SKILL')
+    if language is None:
+        language = config.get('DEFAULT_LANGUAGE')
+    if framework is None:
+        framework = config.get('DEFAULT_FRAMEWORK')
+
     config = load_config()
     llm = LLMClient(config)
     orchestrator = Orchestrator(config, llm, mock=mock)
@@ -125,8 +120,6 @@ def generate(ticket_id, description, skill, language, framework, mock, interacti
         framework=framework or config.get('DEFAULT_FRAMEWORK'),
         output=output
     )
-    if final_code is None:
-        return
     if output:
         save_to_file(final_code, output)
         show_success(f"Финальный тест сохранён в {output}")

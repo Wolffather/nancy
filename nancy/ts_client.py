@@ -17,12 +17,17 @@ def _mock_response(ticket_id):
 class TSClient:
     def __init__(self, config, mock=False):
         self.mock = mock or config.get('MOCK_TS', False)
-        if not self.mock:
-            self.base_url = config['TS_URL']
-            self.auth = HTTPBasicAuth(config['TS_EMAIL'], config['TS_API_TOKEN'])
-        else:
-            self.base_url = None
-            self.auth = None
+        self.base_url = config['TS_URL']
+        self.api_path = config.get('TS_API_PATH', '/rest/api/3')
+        self.auth = HTTPBasicAuth(config['TS_EMAIL'], config['TS_API_TOKEN'])
+
+    def get_issue(self, ticket_id):
+        if self.mock:
+            return _mock_response(ticket_id)
+        url = f"{self.base_url}{self.api_path}/issue/{ticket_id}"
+        resp = requests.get(url, auth=self.auth)
+        resp.raise_for_status()
+        return resp.json()
 
     def get_issue(self, ticket_id):
         if self.mock:

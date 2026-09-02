@@ -1,8 +1,14 @@
 from pathlib import Path
 from typing import Optional
+from .default_prompts import (
+    STRATEGY_PROJECT_TEMPLATE,
+    PROJECT_TEMPLATE,
+    TICKET_TEMPLATE,
+    USER_TEMPLATE
+)
 
 class PromptBuilder:
-    def __init__(self, template_dir="nancy/prompts"):
+    def __init__(self, template_dir):
         self.template_dir = Path(template_dir)
         self.cache = {}
 
@@ -16,6 +22,7 @@ class PromptBuilder:
             self.cache[template_name] = content
             return content
 
+        # fallback
         fallback = self._default_template(template_name)
         self.cache[template_name] = fallback
         return fallback
@@ -23,46 +30,13 @@ class PromptBuilder:
     def _default_template(self, template_name: str) -> str:
         """Возвращает встроенный шаблон, если файл не найден."""
         if "project" in template_name and "strategy" in template_name:
-            return """
-Ты — эксперт по тестированию. Проанализируй структуру проекта на языке {language} и предложи стратегию тестирования с учётом выбранного скилла: {skill}.
-
-Учитывай:
-- Какие классы и методы нуждаются в тестировании.
-- Какие типы тестов (юнит, интеграционные, e2e, нагрузочные, UI, безопасность) наиболее подходят.
-- Какие фреймворки и инструменты лучше использовать для этого типа тестирования.
-- Какие сценарии должны быть покрыты в первую очередь.
-
-Не генерируй код автотестов — только описание стратегии на русском языке.
-
-Структура проекта:
-{context}
-{feedback}
-"""
+            return STRATEGY_PROJECT_TEMPLATE
         elif "project" in template_name:
-            return """
-Проанализируй проект на языке {language} и сгенерируй тесты для всех публичных методов с учётом скилла {skill} {fwk}.
-
-Структура проекта:
-{context}
-{feedback}
-"""
+            return PROJECT_TEMPLATE
         elif "ticket" in template_name:
-            return """
-Тикет:
-{context}
-
-Сгенерируй автотест на языке {language} с учётом скилла {skill}
-{fwk}
-{feedback}
-"""
+            return TICKET_TEMPLATE
         else:
-            return """
-Сгенерируй автотест на языке {language} с учётом скилла {skill}
-{fwk}
-Описание сценария:
-{context}
-{feedback}
-"""
+            return USER_TEMPLATE
 
     def build_prompt(
         self,

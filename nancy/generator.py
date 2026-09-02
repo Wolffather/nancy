@@ -2,11 +2,13 @@ import json
 from pathlib import Path
 from .prompt_builder import PromptBuilder
 
+
+
 class TestGenerator:
-    def __init__(self, llm_client, skills_dir="skills", template_dir="resources"):
+    def __init__(self, llm_client, skills_dir=None, prompt_builder: PromptBuilder = None):
         self.llm = llm_client
-        self.skills_dir = Path(skills_dir)
-        self.prompt_builder = PromptBuilder(template_dir)
+        self.skills_dir = Path(skills_dir) if skills_dir else Path('skills')
+        self.prompt_builder = prompt_builder
 
     def generate_test(self, context, skill_type, language, framework=None, feedback=None):
         # Загружаем системный промпт (скилл)

@@ -14,7 +14,8 @@ from nancy.analyzers.factory import detect_language
 app = FastAPI(title="Nancy Web Interface", version="0.1.0")
 
 BASE_DIR = Path(__file__).parent
-TEMPLATES_DIR = BASE_DIR / "templates"
+config = load_config()
+TEMPLATES_DIR = Path(config.get('TEMPLATES_DIR', 'nancy/web/templates'))
 if not TEMPLATES_DIR.exists():
     TEMPLATES_DIR.mkdir(parents=True)
 

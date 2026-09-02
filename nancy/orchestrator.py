@@ -8,15 +8,19 @@ from nancy.ts_client import TSClient
 
 class Orchestrator:
     def __init__(self, config, llm_client, mock=False):
+        print("Orchestrator" + config.get('PROMPTS_DIR'))
         self.config = config
         self.llm = llm_client
         self.mock = mock
         self.ts_client = TSClient(config, mock=mock)
+        self.prompt_builder = PromptBuilder(
+            template_dir=config.get('PROMPTS_DIR')
+        )
         self.generator = TestGenerator(
             llm_client,
-            skills_dir=config.get('SKILLS_DIR', 'skills')
+            skills_dir=config.get('SKILLS_DIR'),
+            prompt_builder=self.prompt_builder
         )
-        self.prompt_builder = PromptBuilder()
 
     def run(self, *,
             ticket_id=None,

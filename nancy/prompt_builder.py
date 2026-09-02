@@ -14,10 +14,8 @@ class PromptBuilder:
         if file_path.exists():
             content = file_path.read_text(encoding='utf-8')
             self.cache[template_name] = content
-            print(f"[DEBUG] Загружен шаблон: {file_path}")
             return content
 
-        print(f"[WARN] Шаблон {template_name} не найден, использую fallback")
         fallback = self._default_template(template_name)
         self.cache[template_name] = fallback
         return fallback

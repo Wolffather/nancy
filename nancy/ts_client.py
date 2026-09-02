@@ -27,9 +27,7 @@ class TSClient:
     def get_issue(self, ticket_id):
         if self.mock:
             return _mock_response(ticket_id)
-        else:
-            url = f"{self.base_url}/rest/api/3/issue/{ticket_id}"
-            resp = requests.get(url, auth=self.auth)
-            resp.raise_for_status()
-            return resp.json()
-
+        url = f"{self.base_url}/rest/api/3/issue/{ticket_id}"
+        resp = requests.get(url, auth=self.auth)
+        resp.raise_for_status()
+        return resp.json()
